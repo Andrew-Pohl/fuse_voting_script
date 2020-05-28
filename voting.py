@@ -3,6 +3,7 @@ import os
 from getpass import getpass
 from web3 import Web3
 import votingABI
+import time
 
 FuseFileStructure=True
 
@@ -22,6 +23,8 @@ while (choice != '1' and choice != '2'):
     choice = input("Accept (1), reject (2): ")
 
 hexData = fuseVotingContract.encodeABI(fn_name="vote", args=[int(ballotID),int(choice)])
+
+addrList = []
 
 for file in os.listdir(dirToSearch):
     private_key = ''
@@ -45,7 +48,7 @@ for file in os.listdir(dirToSearch):
         addr=data['address']
         f.close()
         passWordString = 'What is your password for ' + addr + ' ?: '
-        keystorePassword = getpass.getpass(prompt=passWordString)
+        keystorePassword = getpass(prompt=passWordString)
         web3Fuse = Web3(Web3.HTTPProvider(RPC_ADDRESS))
         with open(dirToSearch + '/' + file) as keyfile:
             encrypted_key = keyfile.read()
@@ -69,5 +72,13 @@ for file in os.listdir(dirToSearch):
         try:
             txid = web3Fuse.eth.sendRawTransaction(signed_txn.rawTransaction)
             print ("Transaction sent on: " + addr + " TXID: " + web3Fuse.toHex(txid))
+            addrList.append(addr)
         except ValueError:
             print("failedToSend from " + addr)
+
+time.sleep(5)
+
+for address in addrList:
+    voted = fuseVotingContract.functions.getVoterChoice(int(ballotID), address).call()
+    if voted != int(choice):
+        print("Failed to vote for addr: " + address)
